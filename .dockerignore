@@ -1,0 +1,10 @@
+.git
+.venv
+__pycache__
+*.py[cod]
+*.mp4
+.env
+.runtime
+output
+data/parties/*/*.share
+data/parties/*/*.tmp

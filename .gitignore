@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.venv-test/
+.pytest_cache/
+.env
+.runtime/
+output/
+
+# Los videos permanecen fuera del control de versiones.
+*.mp4
+
+# Shares producidos en ejecución; las carpetas se conservan con .gitkeep.
+data/parties/*/*.share
+data/parties/*/*.tmp

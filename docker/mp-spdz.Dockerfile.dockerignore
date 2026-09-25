@@ -1,0 +1,12 @@
+**/.git
+**/.venv
+**/__pycache__
+**/*.pyc
+proyecto-delta/.runtime
+proyecto-delta/output
+proyecto-delta/data/parties/*/*.share
+proyecto-delta/*.mp4
+MP-SPDZ/Player-Data
+MP-SPDZ/Programs/Bytecode
+MP-SPDZ/Programs/Schedules
+MP-SPDZ/*.x
