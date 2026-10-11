@@ -7,10 +7,11 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from client.preprocessing.yunet import YuNet
+
 
 class VideoPreprocessingError(RuntimeError):
     """El MP4 no cumple el perfil o no pudo decodificarse."""
-
 
 @dataclass(frozen=True)
 class VideoMetadata:
@@ -37,6 +38,8 @@ class PreprocessedVideo:
 class VideoPreprocessor:
     """Reduce resolución/FPS y convierte a grayscale exclusivamente en cliente."""
 
+
+
     def __init__(
         self,
         *,
@@ -56,7 +59,54 @@ class VideoPreprocessor:
         self._max_height = int(max_height)
         self._target_fps = float(target_fps)
 
-    def process(self, video_path: str | Path) -> PreprocessedVideo:
+    @staticmethod
+    def visualize(image, results, box_color=(0, 255, 0), text_color=(0, 0, 255), fps=None):
+        output = image.copy()
+        landmark_color = [
+            (255,   0,   0), # right eye
+            (  0,   0, 255), # left eye
+            (  0, 255,   0), # nose tip
+            (255,   0, 255), # right mouth corner
+            (  0, 255, 255)  # left mouth corner
+        ]
+
+        if fps is not None:
+            cv2.putText(output, 'FPS: {:.2f}'.format(fps), (0, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color)
+
+        for det in results:
+            bbox = det[0:4].astype(np.int32)
+            cv2.rectangle(output, (bbox[0], bbox[1]), (bbox[0]+bbox[2], bbox[1]+bbox[3]), box_color, 2)
+
+            conf = det[-1]
+            cv2.putText(output, '{:.4f}'.format(conf), (bbox[0], bbox[1]+12), cv2.FONT_HERSHEY_DUPLEX, 0.5, text_color)
+
+            landmarks = det[4:14].astype(np.int32).reshape((5,2))
+            for idx, landmark in enumerate(landmarks):
+                cv2.circle(output, landmark, 2, landmark_color[idx], 2)
+
+        return output
+
+    def _model_recognition(self, image, model, decoded_index):
+        h, w, _ = image.shape
+
+        # Inference
+        model.setInputSize([w, h])
+        results = model.infer(image)
+
+        # Print results
+        print('{} faces detected.'.format(results.shape[0]))
+        for idx, det in enumerate(results):
+            print('{}: {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f} {:.0f}'.format(
+                idx, *det[:-1])
+            )
+
+        # Draw results on the input image
+        image = self.visualize(image, results)
+        results_dir = Path("results")
+        results_dir.mkdir(parents=True, exist_ok=True)
+        cv2.imwrite(str(results_dir / f"result{decoded_index}.jpg"), image)
+
+    def process(self, video_path: str | Path, model: YuNet) -> PreprocessedVideo:
         path = Path(video_path)
         capture = cv2.VideoCapture(str(path))
         if not capture.isOpened():
@@ -91,8 +141,11 @@ class VideoPreprocessor:
                     raise VideoPreprocessingError(
                         f"El video excede la duración máxima de {self._max_duration:g} segundos"
                     )
+                
                 if timestamp + 1e-9 < next_sample_time:
                     continue
+
+                self._model_recognition(frame, model, decoded_index)
 
                 gray = self._to_grayscale(frame)
                 if target_size is None:

@@ -12,6 +12,7 @@ from client.preprocessing.video_reconstructor import (
 )
 
 __all__ = [
+    "ModelData",
     "PreprocessedVideo",
     "VideoMetadata",
     "VideoPreprocessingError",
@@ -19,4 +20,3 @@ __all__ = [
     "VideoReconstructionError",
     "VideoReconstructor",
 ]
-
